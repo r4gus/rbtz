@@ -17,10 +17,21 @@ pub const Dir = enum {
     Right,
 };
 
+/// Red-black tree in linear memory
+///
+/// A red-black tree is a balanced binary search tree that satisfies the following requirements:
+/// 1. Every node is either red or black
+/// 2. All null nodes are considered black
+/// 3. A red node does not have a red child
+/// 4. Every path from a given node to any of its descendant null nodes goes through the same number of black nodes
 pub fn RBTree(
+    /// The type of a node key
     comptime K: type,
+    /// The type of a node value
     comptime V: type,
+    /// The maximum number of nodes the tree can store
     comptime max: usize,
+    /// A function for comparing two keys
     comptime cmp: fn (lhs: *const K, rhs: *const K) Cmp,
 ) type {
     return struct {
@@ -34,9 +45,13 @@ pub fn RBTree(
         const MAX: usize = max;
         const Self = @This();
 
+        /// An array of bytes representing the memory for the tree nodes
         raw: [TOTAL_SIZE]u8 = .{0} ** TOTAL_SIZE,
+        /// The number of nodes currently stored in the tree
         count: usize = 0,
 
+        /// Searches the tree for a node with the specified key k and returns its index
+        /// if found, or null if not found
         pub fn get(self: *const Self, k: K) ?usize {
             if (self.count == 0) return null;
 
@@ -61,6 +76,7 @@ pub fn RBTree(
             }
         }
 
+        /// Inserts a new node with key k and value v into the tree
         pub fn insert(self: *Self, k: K, v: V) void {
             // Find free spot
             var parent: usize = 0; // we start at the root node
@@ -157,14 +173,19 @@ pub fn RBTree(
             return;
         }
 
+        /// Performs a left rotation on the node at index n in the tree t
         pub fn rotate_left(t: *Self, n: usize) void {
             _ = rotate_dir_root(t, n, .Left);
         }
 
+        /// Performs a right rotation on the node at index n in the tree t
         pub fn rotate_right(t: *Self, n: usize) void {
             _ = rotate_dir_root(t, n, .Right);
         }
 
+        /// Performs a rotation in the specified dir (either left or right) on the
+        /// node at index p in the tree t, making the rotated node the new root of
+        /// the subtree and returning its index
         pub fn rotate_dir_root(t: *Self, p: usize, dir: Dir) usize {
             const g: ?usize = if (p > 0) t.get_parent(p) else null;
             var s: usize = switch (dir) {
@@ -212,6 +233,7 @@ pub fn RBTree(
             return s; // s is the new root of the subtree
         }
 
+        /// Retrieves the key of the node at index idx in the tree
         pub fn get_key(self: *const Self, idx: usize) K {
             const offset = NODE_SIZE * idx;
             var raw_key: [KEY_SIZE]u8 = undefined;
@@ -219,6 +241,7 @@ pub fn RBTree(
             return std.mem.bytesToValue(K, &raw_key);
         }
 
+        /// Retrieves the value of the node at index idx in the tree
         pub fn get_value(self: *const Self, idx: usize) V {
             var offset = NODE_SIZE * idx;
             offset += KEY_SIZE;
@@ -227,11 +250,13 @@ pub fn RBTree(
             return std.mem.bytesToValue(V, &raw_value);
         }
 
+        /// Retrieves the color (Red or Black) of the node at index idx in the tree
         pub fn get_color(self: *const Self, idx: usize) Color {
             var offset = NODE_SIZE * idx;
             return @intToEnum(Color, self.raw[offset + KEY_SIZE + VALUE_SIZE]);
         }
 
+        /// Retrieves the index of the parent node of the node at index idx in the tree
         pub fn get_parent(self: *const Self, idx: usize) usize {
             var offset = NODE_SIZE * idx;
             offset += KEY_SIZE + VALUE_SIZE + COLOR_SIZE;
@@ -240,6 +265,8 @@ pub fn RBTree(
             return std.mem.bytesToValue(usize, &raw_idx);
         }
 
+        /// Retrieves the index of the child node in the specified dir
+        /// (either left or right) of the node at index idx in the tree
         pub fn get_child(self: *const Self, idx: usize, dir: Dir) usize {
             return switch (dir) {
                 .Left => get_lchild(self, idx),
@@ -247,6 +274,8 @@ pub fn RBTree(
             };
         }
 
+        /// Retrieves the index of the child node in the opposite direction of the
+        /// specified dir (either left or right) of the node at index idx in the tree
         pub fn get_other_child(self: *const Self, idx: usize, dir: Dir) usize {
             return switch (dir) {
                 .Left => get_rchild(self, idx),
@@ -254,6 +283,8 @@ pub fn RBTree(
             };
         }
 
+        /// Retrieves the index of the left child node of the node at index
+        /// idx in the tree
         pub fn get_lchild(self: *const Self, idx: usize) usize {
             var offset = NODE_SIZE * idx;
             offset += KEY_SIZE + VALUE_SIZE + COLOR_SIZE + INDEX_SIZE;
@@ -262,6 +293,8 @@ pub fn RBTree(
             return std.mem.bytesToValue(usize, &raw_idx);
         }
 
+        /// Retrieves the index of the right child node of the node at index idx
+        /// in the tree
         pub fn get_rchild(self: *const Self, idx: usize) usize {
             var offset = NODE_SIZE * idx;
             offset += KEY_SIZE + VALUE_SIZE + COLOR_SIZE + INDEX_SIZE * 2;
@@ -294,6 +327,7 @@ pub fn RBTree(
             std.mem.copy(u8, self.raw[offset .. offset + INDEX_SIZE], std.mem.asBytes(&rc));
         }
 
+        /// The swap function swaps the positions of two nodes in the RBTree
         pub fn swap(self: *Self, x: usize, y: usize) void {
             var offset1 = NODE_SIZE * x;
             var offset2 = NODE_SIZE * y;
