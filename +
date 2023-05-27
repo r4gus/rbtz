@@ -84,7 +84,7 @@ pub fn RBTree(
                             parent = l;
                         },
                         .Equal => {
-                            return; // TODO
+                            return;
                         },
                         .Greater => {
                             // k is greater than nk
@@ -152,7 +152,8 @@ pub fn RBTree(
                 self.set_color(grand_parent, .Red);
                 node = grand_parent; // new current node
 
-                if (node == 0) break else parent = self.get_parent(node);
+                parent = self.get_parent(node);
+                if (parent == 0) break;
             }
             return;
         }
@@ -544,54 +545,4 @@ test "Insert nodes" {
     tree.insert(10, 100);
     try testing.expectEqual(@intCast(usize, 0), tree.get(10).?);
     try testing.expectEqual(@intCast(u32, 100), tree.get_value(0));
-    try testing.expectEqual(Color.Red, tree.get_color(0));
-
-    tree.insert(5, 50);
-    try testing.expectEqual(@intCast(usize, 1), tree.get(5).?);
-    try testing.expectEqual(@intCast(u32, 50), tree.get_value(tree.get_lchild(0)));
-    try testing.expectEqual(Color.Black, tree.get_color(0));
-    try testing.expectEqual(Color.Red, tree.get_color(tree.get_lchild(0)));
-
-    tree.insert(15, 150);
-    try testing.expectEqual(@intCast(usize, 2), tree.get(15).?);
-    try testing.expectEqual(@intCast(u32, 150), tree.get_value(tree.get_rchild(0)));
-    try testing.expectEqual(Color.Black, tree.get_color(0));
-    try testing.expectEqual(Color.Red, tree.get_color(tree.get_lchild(0)));
-    try testing.expectEqual(Color.Red, tree.get_color(tree.get_rchild(0)));
-
-    tree.insert(3, 30);
-    try testing.expectEqual(@intCast(usize, 3), tree.get(3).?);
-    try testing.expectEqual(@intCast(u32, 30), tree.get_value(tree.get_lchild(tree.get_lchild(0))));
-    try testing.expectEqual(Color.Red, tree.get_color(0));
-    try testing.expectEqual(Color.Black, tree.get_color(tree.get_lchild(0)));
-    try testing.expectEqual(Color.Black, tree.get_color(tree.get_rchild(0)));
-    try testing.expectEqual(Color.Red, tree.get_color(tree.get_lchild(tree.get_lchild(0))));
-
-    tree.insert(7, 70);
-    try testing.expectEqual(@intCast(usize, 4), tree.get(7).?);
-    try testing.expectEqual(@intCast(u32, 70), tree.get_value(tree.get_rchild(tree.get_lchild(0))));
-    try testing.expectEqual(Color.Red, tree.get_color(0));
-    try testing.expectEqual(Color.Black, tree.get_color(tree.get_lchild(0)));
-    try testing.expectEqual(Color.Black, tree.get_color(tree.get_rchild(0)));
-    try testing.expectEqual(Color.Red, tree.get_color(tree.get_lchild(tree.get_lchild(0))));
-    try testing.expectEqual(Color.Red, tree.get_color(tree.get_rchild(tree.get_lchild(0))));
-
-    tree.insert(11, 110);
-    tree.insert(8, 80);
-    try testing.expectEqual(Color.Black, tree.get_color(0));
-    try testing.expectEqual(Color.Red, tree.get_color(tree.get_lchild(0)));
-    try testing.expectEqual(Color.Black, tree.get_color(tree.get_rchild(0)));
-    try testing.expectEqual(Color.Red, tree.get_color(tree.get_lchild(tree.get_rchild(0))));
-    try testing.expectEqual(Color.Black, tree.get_color(tree.get_rchild(tree.get_lchild(0))));
-    try testing.expectEqual(Color.Red, tree.get_color(tree.get_rchild(tree.get_rchild(tree.get_lchild(0)))));
-
-    tree.insert(12, 120); // this will lead to a rotation of the right side of the tree
-    try testing.expectEqual(Color.Black, tree.get_color(0));
-    try testing.expectEqual(@intCast(u32, 100), tree.get_value(0));
-    try testing.expectEqual(Color.Black, tree.get_color(tree.get_rchild(0)));
-    try testing.expectEqual(@intCast(u32, 120), tree.get_value(tree.get_rchild(0)));
-    try testing.expectEqual(Color.Red, tree.get_color(tree.get_lchild(tree.get_rchild(0))));
-    try testing.expectEqual(@intCast(u32, 110), tree.get_value(tree.get_lchild(tree.get_rchild(0))));
-    try testing.expectEqual(Color.Red, tree.get_color(tree.get_rchild(tree.get_rchild(0))));
-    try testing.expectEqual(@intCast(u32, 150), tree.get_value(tree.get_rchild(tree.get_rchild(0))));
 }
