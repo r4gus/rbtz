@@ -137,11 +137,12 @@ pub fn RBTree(
                     return;
                 }
 
-                grand_parent = self.get_parent(parent);
-                if (parent == 0) { // parent is root and red
+                grand_parent = if (self.get_parent(parent)) |gp| blk: {
+                    break :blk gp;
+                } else { // parent is root and red
                     self.set_color(parent, .Black);
                     return;
-                }
+                };
 
                 // Get the side of grand parent on which the parent is located
                 dir = if (self.get_lchild(grand_parent) == parent) .Left else .Right;
@@ -168,9 +169,171 @@ pub fn RBTree(
                 self.set_color(grand_parent, .Red);
                 node = grand_parent; // new current node
 
-                if (node == 0) break else parent = self.get_parent(node);
+                parent = if (self.get_parent(node)) |p| blk: {
+                    break :blk p;
+                } else {
+                    break;
+                };
             }
             return;
+        }
+
+        pub fn delete(self: *Self, k: K) void {
+            var child: usize = 0;
+            var node = if (self.get(k)) |n| n else return;
+
+            if (self.get_lchild(node) == 0 and self.get_rchild(node) == 0) {
+                if (node == 0) { // root node
+                    self.delete_node(node);
+                } else {
+                    // We swap the node with the last node in
+                    // linear memory and then remove the last entry
+                    self.delete_node(node);
+                }
+                return;
+            }
+
+            if (self.get_lchild(node) != 0 and self.get_rchild(node) != 0) {
+                // Copy key and value from predecessor and then delete it instead
+                const pred = self.max_node(self.get_lchild(node));
+                self.set_key(node, self.get_key(pred));
+                self.set_value(node, self.get_value(pred));
+                node = pred;
+            }
+
+            child = if (self.get_rchild(node) == 0) self.get_lchild(node) else self.get_rchild(node);
+            if (self.get_color(node) == .Black) {
+                self.set_color(node, self.get_color(child));
+                self.delete_case1(node);
+            }
+            self.replace_node(&node, &child);
+            if (child == 0) {
+                self.set_color(child, .Black); // root should be black
+            }
+
+            self.delete_node(node);
+        }
+
+        pub fn delete_case1(self: *Self, node: usize) void {
+            if (node == 0) {
+                return;
+            } else {
+                self.delete_case2(node);
+            }
+        }
+
+        pub fn delete_case2(self: *Self, node: usize) void {
+            const p = self.get_parent(node).?;
+            const dir: Dir = if (self.get_lchild(p) == node) .Left else .Right;
+            const sibling = self.get_other_child(p, dir);
+            if (sibling != 0 and self.get_color(sibling) == .Red) {
+                self.set_color(p, .Red);
+                self.set_color(sibling, .Black);
+                switch (dir) {
+                    .Left => self.rotate_left(p),
+                    .Right => self.rotate_right(p),
+                }
+            }
+            self.delete_case3(node);
+        }
+
+        pub fn delete_case3(self: *Self, node: usize) void {
+            const p = self.get_parent(node).?;
+            const dir: Dir = if (self.get_lchild(p) == node) .Left else .Right;
+            const sibling = self.get_other_child(p, dir);
+            const sibling_color: Color = if (sibling == 0) .Black else self.get_color(sibling);
+            const schild_l_color: Color = if (sibling != 0 and self.get_lchild(sibling) != 0) self.get_color(self.get_lchild(sibling)) else .Black;
+            const schild_r_color: Color = if (sibling != 0 and self.get_rchild(sibling) != 0) self.get_color(self.get_rchild(sibling)) else .Black;
+
+            if (self.get_color(p) == .Black and sibling_color == .Black and schild_l_color == .Black and schild_r_color == .Black) {
+                if (sibling != 0) self.set_color(sibling, .Red);
+                self.delete_case1(p);
+            } else {
+                self.delete_case4(node);
+            }
+        }
+
+        pub fn delete_case4(self: *Self, node: usize) void {
+            const p = self.get_parent(node).?;
+            const dir: Dir = if (self.get_lchild(p) == node) .Left else .Right;
+            const sibling = self.get_other_child(p, dir);
+            const sibling_color: Color = if (sibling == 0) .Black else self.get_color(sibling);
+            const schild_l_color: Color = if (sibling != 0 and self.get_lchild(sibling) != 0) self.get_color(self.get_lchild(sibling)) else .Black;
+            const schild_r_color: Color = if (sibling != 0 and self.get_rchild(sibling) != 0) self.get_color(self.get_rchild(sibling)) else .Black;
+
+            if (self.get_color(p) == .Red and sibling_color == .Black and schild_l_color == .Black and schild_r_color == .Black) {
+                if (sibling != 0) self.set_color(sibling, .Red);
+                self.set_color(p, .Black);
+            } else {
+                self.delete_case5(node);
+            }
+        }
+
+        pub fn delete_case5(self: *Self, node: usize) void {
+            const p = self.get_parent(node).?;
+            const dir: Dir = if (self.get_lchild(p) == node) .Left else .Right;
+            const sibling = self.get_other_child(p, dir);
+            const sibling_color: Color = if (sibling == 0) .Black else self.get_color(sibling);
+            const schild_l_color: Color = if (sibling != 0 and self.get_lchild(sibling) != 0) self.get_color(self.get_lchild(sibling)) else .Black;
+            const schild_r_color: Color = if (sibling != 0 and self.get_rchild(sibling) != 0) self.get_color(self.get_rchild(sibling)) else .Black;
+
+            if (dir == .Left and sibling_color == .Black and schild_l_color == .Red and schild_r_color == .Black) {
+                if (sibling != 0) {
+                    self.set_color(sibling, .Red);
+                    if (self.get_lchild(sibling) != 0) self.set_color(self.get_lchild(sibling), .Black);
+                    self.rotate_right(sibling);
+                }
+            } else if (dir == .Right and sibling_color == .Black and schild_l_color == .Red and schild_r_color == .Black) {
+                if (sibling != 0) {
+                    self.set_color(sibling, .Red);
+                    if (self.get_rchild(sibling) != 0) self.set_color(self.get_rchild(sibling), .Black);
+                    self.rotate_left(sibling);
+                }
+            }
+            self.delete_case6(node);
+        }
+
+        pub fn delete_case6(self: *Self, node: usize) void {
+            const p = self.get_parent(node).?;
+            const dir: Dir = if (self.get_lchild(p) == node) .Left else .Right;
+            const sibling = self.get_other_child(p, dir);
+
+            if (sibling != 0) self.set_color(sibling, self.get_color(p));
+            self.set_color(p, .Black);
+
+            switch (dir) {
+                .Left => {
+                    if (sibling != 0 and self.get_rchild(sibling) != 0) {
+                        self.set_color(self.get_rchild(sibling), .Black);
+                    }
+                    self.rotate_left(p);
+                },
+                .Right => {
+                    if (sibling != 0 and self.get_lchild(sibling) != 0) {
+                        self.set_color(self.get_lchild(sibling), .Black);
+                    }
+                    self.rotate_right(p);
+                },
+            }
+        }
+
+        pub fn replace_node(self: *Self, old: *usize, new: *usize) void {
+            self.set_parent(new.*, if (self.get_parent(old.*)) |p| p else 0);
+
+            if (old.* == 0) { // root node
+                self.swap(old.*, new.*);
+                const buf = old.*;
+                old.* = new.*;
+                new.* = buf;
+            } else {
+                const p = self.get_parent(old.*).?;
+
+                if (self.get_lchild(p) == old.*) {
+                    self.set_lchild(p, new.*);
+                } else {
+                    self.set_rchild(p, new.*);
+                }
+            }
         }
 
         /// Performs a left rotation on the node at index n in the tree t
@@ -187,7 +350,7 @@ pub fn RBTree(
         /// node at index p in the tree t, making the rotated node the new root of
         /// the subtree and returning its index
         pub fn rotate_dir_root(t: *Self, p: usize, dir: Dir) usize {
-            const g: ?usize = if (p > 0) t.get_parent(p) else null;
+            const g: ?usize = t.get_parent(p);
             var s: usize = switch (dir) {
                 .Left => t.get_rchild(p),
                 .Right => t.get_lchild(p),
@@ -257,7 +420,9 @@ pub fn RBTree(
         }
 
         /// Retrieves the index of the parent node of the node at index idx in the tree
-        pub fn get_parent(self: *const Self, idx: usize) usize {
+        pub fn get_parent(self: *const Self, idx: usize) ?usize {
+            if (idx == 0) return null; // root has no parent
+
             var offset = NODE_SIZE * idx;
             offset += KEY_SIZE + VALUE_SIZE + COLOR_SIZE;
             var raw_idx: [INDEX_SIZE]u8 = undefined;
@@ -327,14 +492,63 @@ pub fn RBTree(
             std.mem.copy(u8, self.raw[offset .. offset + INDEX_SIZE], std.mem.asBytes(&rc));
         }
 
+        pub fn set_key(self: *Self, idx: usize, key: K) void {
+            var offset = NODE_SIZE * idx;
+            std.mem.copy(u8, self.raw[offset .. offset + KEY_SIZE], std.mem.asBytes(&key));
+        }
+
+        pub fn set_value(self: *Self, idx: usize, value: V) void {
+            var offset = NODE_SIZE * idx + KEY_SIZE;
+            std.mem.copy(u8, self.raw[offset .. offset + VALUE_SIZE], std.mem.asBytes(&value));
+        }
+
         /// The swap function swaps the positions of two nodes in the RBTree
         pub fn swap(self: *Self, x: usize, y: usize) void {
             var offset1 = NODE_SIZE * x;
             var offset2 = NODE_SIZE * y;
             var buffer: [NODE_SIZE]u8 = undefined;
             @memcpy(buffer[0..], self.raw[offset1 .. offset1 + NODE_SIZE]);
+
+            const lchild_x = self.get_lchild(x);
+            const rchild_x = self.get_rchild(x);
+
+            const lchild_y = self.get_lchild(y);
+            const rchild_y = self.get_rchild(y);
+
+            if (self.get_parent(x)) |p| {
+                if (self.get_lchild(p) == x) {
+                    self.set_lchild(p, y);
+                } else {
+                    self.set_rchild(p, y);
+                }
+            }
+            if (lchild_x != 0) self.set_parent(lchild_x, y);
+            if (rchild_x != 0) self.set_parent(rchild_x, y);
+
+            if (self.get_parent(y)) |p| {
+                if (self.get_lchild(p) == y) {
+                    self.set_lchild(p, x);
+                } else {
+                    self.set_rchild(p, x);
+                }
+            }
+            if (lchild_y != 0) self.set_parent(lchild_y, x);
+            if (rchild_y != 0) self.set_parent(rchild_y, x);
+
             @memcpy(self.raw[offset1 .. offset1 + NODE_SIZE], self.raw[offset2 .. offset2 + NODE_SIZE]);
             @memcpy(self.raw[offset2 .. offset2 + NODE_SIZE], buffer[0..]);
+        }
+
+        /// Walks right until it reaches the last non-leaf node and returns it
+        pub fn max_node(self: *Self, n: usize) usize {
+            var ret: usize = n;
+            var next: usize = self.get_rchild(ret);
+            while (true) {
+                if (next == 0) break;
+                ret = next;
+                next = self.get_rchild(ret);
+            }
+            return ret;
         }
 
         /// Add a node at the specified index to linear memory
@@ -365,6 +579,62 @@ pub fn RBTree(
             offset += INDEX_SIZE;
             std.mem.copy(u8, self.raw[offset .. offset + INDEX_SIZE], std.mem.asBytes(&rchild));
         }
+
+        pub fn delete_node(self: *Self, x: usize) void {
+            if (x >= MAX) return;
+            const y = self.count - 1;
+
+            var offset1 = NODE_SIZE * x;
+            var offset2 = NODE_SIZE * y;
+
+            if (self.get_parent(y)) |p| {
+                if (self.get_lchild(p) == y) {
+                    self.set_lchild(p, x);
+                } else {
+                    self.set_rchild(p, x);
+                }
+            }
+
+            const lchild = self.get_lchild(y);
+            const rchild = self.get_rchild(y);
+
+            if (lchild != 0) self.set_parent(lchild, x);
+            if (rchild != 0) self.set_parent(rchild, x);
+
+            @memcpy(self.raw[offset1 .. offset1 + NODE_SIZE], self.raw[offset2 .. offset2 + NODE_SIZE]);
+            @memset(self.raw[offset2 .. offset2 + NODE_SIZE], 0);
+            self.count -= 1;
+        }
+
+        pub fn print_tree(self: *const Self) void {
+            std.debug.print("\n", .{});
+            if (self.count > 0) {
+                self.print_tree_helper(0, 0);
+            }
+            std.debug.print("\n", .{});
+        }
+
+        fn print_tree_helper(self: *const Self, node: usize, indent: isize) void {
+            const INDENT_STEP = 4;
+
+            if (self.get_rchild(node) != 0) {
+                self.print_tree_helper(self.get_rchild(node), indent + INDENT_STEP);
+            }
+
+            var i: isize = 0;
+            while (i < indent) : (i += 1) {
+                std.debug.print(" ", .{});
+            }
+            if (self.get_color(node) == .Black) {
+                std.debug.print("{any}\n", .{self.get_key(node)});
+            } else {
+                std.debug.print("<{any}>\n", .{self.get_key(node)});
+            }
+
+            if (self.get_lchild(node) != 0) {
+                self.print_tree_helper(self.get_lchild(node), indent + INDENT_STEP);
+            }
+        }
     };
 }
 
@@ -393,7 +663,7 @@ test "add node to linear memory" {
     try std.testing.expectEqualSlices(u8, k[0..], tree.get_key(0)[0..]);
     try std.testing.expectEqual(@intCast(usize, 666), tree.get_value(0));
     try std.testing.expectEqual(Color.Black, tree.get_color(0));
-    try std.testing.expectEqual(@intCast(usize, 0), tree.get_parent(0));
+    try std.testing.expectEqual(tree.get_parent(0), null);
     try std.testing.expectEqual(@intCast(usize, 0), tree.get_lchild(0));
     try std.testing.expectEqual(@intCast(usize, 0), tree.get_rchild(0));
 }
@@ -510,9 +780,9 @@ test "Rotate Node with Key 15 to the Right" {
     try testing.expectEqual(expectedRoot, newRoot);
     try testing.expectEqual(@intCast(u32, 7), tree.get_key(4));
     try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(4));
-    try testing.expectEqual(@intCast(usize, 0), tree.get_parent(4));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_parent(4).?);
     try testing.expectEqual(@intCast(u32, 15), tree.get_key(tree.get_rchild(4)));
-    try testing.expectEqual(@intCast(usize, 4), tree.get_parent(2));
+    try testing.expectEqual(@intCast(usize, 4), tree.get_parent(2).?);
     try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(2));
     try testing.expectEqual(@intCast(usize, 0), tree.get_rchild(2));
 }
@@ -628,4 +898,166 @@ test "Insert nodes" {
     try testing.expectEqual(@intCast(u32, 110), tree.get_value(tree.get_lchild(tree.get_rchild(0))));
     try testing.expectEqual(Color.Red, tree.get_color(tree.get_rchild(tree.get_rchild(0))));
     try testing.expectEqual(@intCast(u32, 150), tree.get_value(tree.get_rchild(tree.get_rchild(0))));
+}
+
+test "delete nodes" {
+    const S = struct {
+        pub fn cmp(lhs: *const u32, rhs: *const u32) Cmp {
+            if (lhs.* == rhs.*) {
+                return .Equal;
+            } else if (lhs.* < rhs.*) {
+                return .Smaller;
+            } else {
+                return .Greater;
+            }
+        }
+    };
+    const K = u32;
+    const V = u32;
+    const MaxNodes = 10;
+    const Tree = RBTree(K, V, MaxNodes, S.cmp);
+    var tree = Tree{};
+
+    // Initially the tree is empty
+    tree.insert(10, 100);
+    tree.insert(5, 50);
+    tree.insert(15, 150);
+    tree.insert(3, 30);
+    tree.insert(7, 70);
+    tree.insert(11, 110);
+    tree.insert(8, 80);
+    tree.insert(12, 120);
+
+    // Delete node with key 7
+    tree.delete(7);
+
+    var k8 = tree.get(8).?;
+    try testing.expectEqual(Color.Red, tree.get_color(k8));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(k8));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_rchild(k8));
+    try testing.expectEqual(@intCast(u32, 5), tree.get_key(tree.get_parent(k8).?));
+
+    var k3 = tree.get(3).?;
+    try testing.expectEqual(Color.Red, tree.get_color(k3));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(k3));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_rchild(k3));
+    try testing.expectEqual(@intCast(u32, 5), tree.get_key(tree.get_parent(k3).?));
+
+    var k5 = tree.get(5).?;
+    try testing.expectEqual(Color.Black, tree.get_color(k5));
+    try testing.expectEqual(k3, tree.get_lchild(k5));
+    try testing.expectEqual(k8, tree.get_rchild(k5));
+    try testing.expectEqual(@intCast(u32, 10), tree.get_key(tree.get_parent(k5).?));
+
+    var k11 = tree.get(11).?;
+    try testing.expectEqual(Color.Red, tree.get_color(k11));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(k11));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_rchild(k11));
+    try testing.expectEqual(@intCast(u32, 12), tree.get_key(tree.get_parent(k11).?));
+
+    var k15 = tree.get(15).?;
+    try testing.expectEqual(Color.Red, tree.get_color(k15));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(k15));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_rchild(k15));
+    try testing.expectEqual(@intCast(u32, 12), tree.get_key(tree.get_parent(k15).?));
+
+    var k12 = tree.get(12).?;
+    try testing.expectEqual(Color.Black, tree.get_color(k12));
+    try testing.expectEqual(k11, tree.get_lchild(k12));
+    try testing.expectEqual(k15, tree.get_rchild(k12));
+    try testing.expectEqual(@intCast(u32, 10), tree.get_key(tree.get_parent(k12).?));
+
+    var k10 = tree.get(10).?;
+    try testing.expectEqual(Color.Black, tree.get_color(k10));
+    try testing.expectEqual(k5, tree.get_lchild(k10));
+    try testing.expectEqual(k12, tree.get_rchild(k10));
+    try testing.expectEqual(tree.get_parent(k10), null);
+
+    // Delete node with key 5
+    tree.delete(5);
+
+    k8 = tree.get(8).?; // Three moves one up
+    try testing.expectEqual(Color.Red, tree.get_color(k8));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(k8));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_rchild(k8));
+    try testing.expectEqual(@intCast(u32, 3), tree.get_key(tree.get_parent(k8).?));
+
+    k3 = tree.get(3).?; // Three moves one up
+    try testing.expectEqual(Color.Black, tree.get_color(k3));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(k3));
+    try testing.expectEqual(k8, tree.get_rchild(k3));
+    try testing.expectEqual(@intCast(u32, 10), tree.get_key(tree.get_parent(k3).?));
+
+    k11 = tree.get(11).?;
+    try testing.expectEqual(Color.Red, tree.get_color(k11));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(k11));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_rchild(k11));
+    try testing.expectEqual(@intCast(u32, 12), tree.get_key(tree.get_parent(k11).?));
+
+    k15 = tree.get(15).?;
+    try testing.expectEqual(Color.Red, tree.get_color(k15));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(k15));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_rchild(k15));
+    try testing.expectEqual(@intCast(u32, 12), tree.get_key(tree.get_parent(k15).?));
+
+    k12 = tree.get(12).?;
+    try testing.expectEqual(Color.Black, tree.get_color(k12));
+    try testing.expectEqual(k11, tree.get_lchild(k12));
+    try testing.expectEqual(k15, tree.get_rchild(k12));
+    try testing.expectEqual(@intCast(u32, 10), tree.get_key(tree.get_parent(k12).?));
+
+    k10 = tree.get(10).?;
+    try testing.expectEqual(Color.Black, tree.get_color(k10));
+    try testing.expectEqual(k5, tree.get_lchild(k10));
+    try testing.expectEqual(k12, tree.get_rchild(k10));
+    try testing.expectEqual(tree.get_parent(k10), null);
+
+    // Delete root node
+    tree.delete(10);
+
+    k11 = tree.get(11).?;
+    try testing.expectEqual(Color.Red, tree.get_color(k11));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(k11));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_rchild(k11));
+    try testing.expectEqual(@intCast(u32, 12), tree.get_key(tree.get_parent(k11).?));
+
+    k15 = tree.get(15).?;
+    try testing.expectEqual(Color.Red, tree.get_color(k15));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(k15));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_rchild(k15));
+    try testing.expectEqual(@intCast(u32, 12), tree.get_key(tree.get_parent(k15).?));
+
+    k12 = tree.get(12).?;
+    try testing.expectEqual(Color.Black, tree.get_color(k12));
+    try testing.expectEqual(k11, tree.get_lchild(k12));
+    try testing.expectEqual(k15, tree.get_rchild(k12));
+    try testing.expectEqual(@intCast(u32, 8), tree.get_key(tree.get_parent(k12).?));
+
+    tree.delete(8);
+
+    k11 = tree.get(11).?;
+    try testing.expectEqual(Color.Red, tree.get_color(k11));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(k11));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_rchild(k11));
+    try testing.expectEqual(@intCast(u32, 3), tree.get_key(tree.get_parent(k11).?));
+
+    k3 = tree.get(3).?;
+    try testing.expectEqual(Color.Black, tree.get_color(k3));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(k3));
+    try testing.expectEqual(k11, tree.get_rchild(k3));
+    try testing.expectEqual(@intCast(u32, 12), tree.get_key(tree.get_parent(k3).?));
+
+    k15 = tree.get(15).?;
+    try testing.expectEqual(Color.Black, tree.get_color(k15));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_lchild(k15));
+    try testing.expectEqual(@intCast(usize, 0), tree.get_rchild(k15));
+    try testing.expectEqual(@intCast(u32, 12), tree.get_key(tree.get_parent(k15).?));
+
+    k12 = tree.get(12).?;
+    try testing.expectEqual(Color.Black, tree.get_color(k12));
+    try testing.expectEqual(k3, tree.get_lchild(k12));
+    try testing.expectEqual(k15, tree.get_rchild(k12));
+    try testing.expectEqual(tree.get_parent(k12), null);
+
+    tree.delete(3);
 }
