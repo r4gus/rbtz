@@ -214,7 +214,7 @@ pub fn RBTree(
             self.delete_node(node);
         }
 
-        pub fn delete_case1(self: *Self, node: usize) void {
+        fn delete_case1(self: *Self, node: usize) void {
             if (node == 0) {
                 return;
             } else {
@@ -222,7 +222,7 @@ pub fn RBTree(
             }
         }
 
-        pub fn delete_case2(self: *Self, node: usize) void {
+        fn delete_case2(self: *Self, node: usize) void {
             const p = self.get_parent(node).?;
             const dir: Dir = if (self.get_lchild(p) == node) .Left else .Right;
             const sibling = self.get_other_child(p, dir);
@@ -237,7 +237,7 @@ pub fn RBTree(
             self.delete_case3(node);
         }
 
-        pub fn delete_case3(self: *Self, node: usize) void {
+        fn delete_case3(self: *Self, node: usize) void {
             const p = self.get_parent(node).?;
             const dir: Dir = if (self.get_lchild(p) == node) .Left else .Right;
             const sibling = self.get_other_child(p, dir);
@@ -253,7 +253,7 @@ pub fn RBTree(
             }
         }
 
-        pub fn delete_case4(self: *Self, node: usize) void {
+        fn delete_case4(self: *Self, node: usize) void {
             const p = self.get_parent(node).?;
             const dir: Dir = if (self.get_lchild(p) == node) .Left else .Right;
             const sibling = self.get_other_child(p, dir);
@@ -269,7 +269,7 @@ pub fn RBTree(
             }
         }
 
-        pub fn delete_case5(self: *Self, node: usize) void {
+        fn delete_case5(self: *Self, node: usize) void {
             const p = self.get_parent(node).?;
             const dir: Dir = if (self.get_lchild(p) == node) .Left else .Right;
             const sibling = self.get_other_child(p, dir);
@@ -293,7 +293,7 @@ pub fn RBTree(
             self.delete_case6(node);
         }
 
-        pub fn delete_case6(self: *Self, node: usize) void {
+        fn delete_case6(self: *Self, node: usize) void {
             const p = self.get_parent(node).?;
             const dir: Dir = if (self.get_lchild(p) == node) .Left else .Right;
             const sibling = self.get_other_child(p, dir);
@@ -317,7 +317,7 @@ pub fn RBTree(
             }
         }
 
-        pub fn replace_node(self: *Self, old: *usize, new: *usize) void {
+        fn replace_node(self: *Self, old: *usize, new: *usize) void {
             self.set_parent(new.*, if (self.get_parent(old.*)) |p| p else 0);
 
             if (old.* == 0) { // root node
@@ -337,19 +337,19 @@ pub fn RBTree(
         }
 
         /// Performs a left rotation on the node at index n in the tree t
-        pub fn rotate_left(t: *Self, n: usize) void {
+        fn rotate_left(t: *Self, n: usize) void {
             _ = rotate_dir_root(t, n, .Left);
         }
 
         /// Performs a right rotation on the node at index n in the tree t
-        pub fn rotate_right(t: *Self, n: usize) void {
+        fn rotate_right(t: *Self, n: usize) void {
             _ = rotate_dir_root(t, n, .Right);
         }
 
         /// Performs a rotation in the specified dir (either left or right) on the
         /// node at index p in the tree t, making the rotated node the new root of
         /// the subtree and returning its index
-        pub fn rotate_dir_root(t: *Self, p: usize, dir: Dir) usize {
+        fn rotate_dir_root(t: *Self, p: usize, dir: Dir) usize {
             const g: ?usize = t.get_parent(p);
             var s: usize = switch (dir) {
                 .Left => t.get_rchild(p),
@@ -414,13 +414,13 @@ pub fn RBTree(
         }
 
         /// Retrieves the color (Red or Black) of the node at index idx in the tree
-        pub fn get_color(self: *const Self, idx: usize) Color {
+        fn get_color(self: *const Self, idx: usize) Color {
             var offset = NODE_SIZE * idx;
             return @intToEnum(Color, self.raw[offset + KEY_SIZE + VALUE_SIZE]);
         }
 
         /// Retrieves the index of the parent node of the node at index idx in the tree
-        pub fn get_parent(self: *const Self, idx: usize) ?usize {
+        fn get_parent(self: *const Self, idx: usize) ?usize {
             if (idx == 0) return null; // root has no parent
 
             var offset = NODE_SIZE * idx;
@@ -432,7 +432,7 @@ pub fn RBTree(
 
         /// Retrieves the index of the child node in the specified dir
         /// (either left or right) of the node at index idx in the tree
-        pub fn get_child(self: *const Self, idx: usize, dir: Dir) usize {
+        fn get_child(self: *const Self, idx: usize, dir: Dir) usize {
             return switch (dir) {
                 .Left => get_lchild(self, idx),
                 .Right => get_rchild(self, idx),
@@ -441,7 +441,7 @@ pub fn RBTree(
 
         /// Retrieves the index of the child node in the opposite direction of the
         /// specified dir (either left or right) of the node at index idx in the tree
-        pub fn get_other_child(self: *const Self, idx: usize, dir: Dir) usize {
+        fn get_other_child(self: *const Self, idx: usize, dir: Dir) usize {
             return switch (dir) {
                 .Left => get_rchild(self, idx),
                 .Right => get_lchild(self, idx),
@@ -450,7 +450,7 @@ pub fn RBTree(
 
         /// Retrieves the index of the left child node of the node at index
         /// idx in the tree
-        pub fn get_lchild(self: *const Self, idx: usize) usize {
+        fn get_lchild(self: *const Self, idx: usize) usize {
             var offset = NODE_SIZE * idx;
             offset += KEY_SIZE + VALUE_SIZE + COLOR_SIZE + INDEX_SIZE;
             var raw_idx: [INDEX_SIZE]u8 = undefined;
@@ -460,7 +460,7 @@ pub fn RBTree(
 
         /// Retrieves the index of the right child node of the node at index idx
         /// in the tree
-        pub fn get_rchild(self: *const Self, idx: usize) usize {
+        fn get_rchild(self: *const Self, idx: usize) usize {
             var offset = NODE_SIZE * idx;
             offset += KEY_SIZE + VALUE_SIZE + COLOR_SIZE + INDEX_SIZE * 2;
             var raw_idx: [INDEX_SIZE]u8 = undefined;
@@ -468,31 +468,31 @@ pub fn RBTree(
             return std.mem.bytesToValue(usize, &raw_idx);
         }
 
-        pub fn set_parent(self: *Self, idx: usize, p: usize) void {
+        fn set_parent(self: *Self, idx: usize, p: usize) void {
             var offset = NODE_SIZE * idx;
             offset += KEY_SIZE + VALUE_SIZE + COLOR_SIZE;
             std.mem.copy(u8, self.raw[offset .. offset + INDEX_SIZE], std.mem.asBytes(&p));
         }
 
-        pub fn set_color(self: *Self, idx: usize, color: Color) void {
+        fn set_color(self: *Self, idx: usize, color: Color) void {
             var offset = NODE_SIZE * idx;
             offset += KEY_SIZE + VALUE_SIZE;
             std.mem.copy(u8, self.raw[offset .. offset + COLOR_SIZE], std.mem.asBytes(&color));
         }
 
-        pub fn set_lchild(self: *Self, idx: usize, lc: usize) void {
+        fn set_lchild(self: *Self, idx: usize, lc: usize) void {
             var offset = NODE_SIZE * idx;
             offset += KEY_SIZE + VALUE_SIZE + COLOR_SIZE + INDEX_SIZE;
             std.mem.copy(u8, self.raw[offset .. offset + INDEX_SIZE], std.mem.asBytes(&lc));
         }
 
-        pub fn set_rchild(self: *Self, idx: usize, rc: usize) void {
+        fn set_rchild(self: *Self, idx: usize, rc: usize) void {
             var offset = NODE_SIZE * idx;
             offset += KEY_SIZE + VALUE_SIZE + COLOR_SIZE + INDEX_SIZE * 2;
             std.mem.copy(u8, self.raw[offset .. offset + INDEX_SIZE], std.mem.asBytes(&rc));
         }
 
-        pub fn set_key(self: *Self, idx: usize, key: K) void {
+        fn set_key(self: *Self, idx: usize, key: K) void {
             var offset = NODE_SIZE * idx;
             std.mem.copy(u8, self.raw[offset .. offset + KEY_SIZE], std.mem.asBytes(&key));
         }
@@ -503,7 +503,7 @@ pub fn RBTree(
         }
 
         /// The swap function swaps the positions of two nodes in the RBTree
-        pub fn swap(self: *Self, x: usize, y: usize) void {
+        fn swap(self: *Self, x: usize, y: usize) void {
             var offset1 = NODE_SIZE * x;
             var offset2 = NODE_SIZE * y;
             var buffer: [NODE_SIZE]u8 = undefined;
@@ -540,7 +540,7 @@ pub fn RBTree(
         }
 
         /// Walks right until it reaches the last non-leaf node and returns it
-        pub fn max_node(self: *Self, n: usize) usize {
+        fn max_node(self: *Self, n: usize) usize {
             var ret: usize = n;
             var next: usize = self.get_rchild(ret);
             while (true) {
@@ -552,9 +552,7 @@ pub fn RBTree(
         }
 
         /// Add a node at the specified index to linear memory
-        ///
-        /// DO NOT USE TO INSERT NODES!
-        pub fn add(
+        fn add(
             self: *Self,
             idx: usize,
             key: K,
@@ -580,7 +578,7 @@ pub fn RBTree(
             std.mem.copy(u8, self.raw[offset .. offset + INDEX_SIZE], std.mem.asBytes(&rchild));
         }
 
-        pub fn delete_node(self: *Self, x: usize) void {
+        fn delete_node(self: *Self, x: usize) void {
             if (x >= MAX) return;
             const y = self.count - 1;
 
